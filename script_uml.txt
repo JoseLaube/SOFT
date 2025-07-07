@@ -1,0 +1,207 @@
+@startuml
+' 1. Enums
+class TipoPerfil {
+    <<enumeration>>
+    ORGANIZADOR
+    LIDER_EQUIPE
+    JUIZ
+}
+
+class StatusEvento {
+    <<enumeration>>
+    PLANEJADO
+    EM_ANDAMENTO
+    CONCLUIDO
+    CANCELADO
+}
+
+class StatusCompeticao {
+    <<enumeration>>
+    INSCRICOES_ABERTAS
+    EM_ANDAMENTO
+    FINALIZADA
+}
+
+class StatusInscricao {
+    <<enumeration>>
+    PENDENTE
+    APROVADA
+    REPROVADA
+}
+
+class StatusLuta {
+    <<enumeration>>
+    AGENDADA
+    EM_ANDAMENTO
+    CONCLUIDA
+}
+
+' 2. Classes de Usuário
+abstract class Usuario {
+    {abstract}
+    # id: int
+    # nome: str
+    # email: str
+    # senha: str
+    # data_cadastro: date
+    + login()
+    + logout()
+}
+
+class Organizador {
+    + perfil: TipoPerfil
+    + criar_evento(nome: str, data_inicio: date, data_fim: date): Evento
+    + adicionar_competicao(evento: Evento, nome: str, tipo: str): Competicao
+    + aprovar_inscricao(inscricao: Inscricao)
+}
+
+class LiderDeEquipe {
+    + perfil: TipoPerfil
+    - equipe: Equipe
+    + cadastrar_equipe(nome_equipe: str): Equipe
+    + adicionar_membro(nome_membro: str, funcao: str): Membro
+    + cadastrar_robo(nome_robo: str, peso: float): Robo
+    + inscrever_robo(robo: Robo, competicao: Competicao): Inscricao
+}
+
+class Juiz {
+    + perfil: TipoPerfil
+    + registrar_vencedor_luta(luta: Luta, vencedor: Inscricao)
+    + registrar_tomada_de_tempo(inscricao: Inscricao, tempo: float): TomadaDeTempo
+}
+
+Usuario <|-- Organizador
+Usuario <|-- LiderDeEquipe
+Usuario <|-- Juiz
+
+' 3. Classes de Estrutura
+class Equipe {
+    - id: int
+    - nome: str
+    - data_criacao: date
+    - lider: LiderDeEquipe
+    - membros: List<Membro>
+    - robos: List<Robo>
+    + adicionar_membro(membro: Membro)
+    + adicionar_robo(robo: Robo)
+}
+
+class Membro {
+    - id: int
+    - nome: str
+    - funcao: str
+    - data_ingresso: date
+}
+
+class Robo {
+    - id: int
+    - nome: str
+    - peso: float
+    - disponivel: bool
+}
+
+class Evento {
+    - id: int
+    - nome: str
+    - data_inicio: date
+    - data_fim: date
+    - status: StatusEvento
+    - organizador: Organizador
+    - competicoes: List<Competicao>
+    + adicionar_competicao(competicao: Competicao)
+}
+
+' 4. Classes de Competição
+abstract class Competicao {
+    {abstract}
+    - id: int
+    - nome: str
+    - evento: Evento
+    - status: StatusCompeticao
+    - inscricoes: List<Inscricao>
+    + receber_inscricao(inscricao: Inscricao)
+    + {abstract} gerar_estrutura()
+}
+
+class CompeticaoCombate {
+    - chave_batalha: ChaveDeBatalha
+    + gerar_estrutura()
+}
+
+class CompeticaoSeguidorDeLinha {
+    + gerar_estrutura()
+    + gerar_classificacao(): List<Resultado>
+}
+
+Competicao <|-- CompeticaoCombate
+Competicao <|-- CompeticaoSeguidorDeLinha
+
+class Inscricao {
+    - id: int
+    - robo: Robo
+    - competicao: Competicao
+    - data_inscricao: datetime
+    - status: StatusInscricao
+    - tomadas_de_tempo: List<TomadaDeTempo>
+    + adicionar_tomada_de_tempo(tomada: TomadaDeTempo)
+    + get_melhor_tempo(): float
+}
+
+' 5. Classes de Mecânica
+class ChaveDeBatalha {
+    - id: int
+    - formato: str
+    - lutas: List<Luta>
+    - robos_participantes: List<Robo>
+    + avancar_vencedor(luta: Luta)
+}
+
+class Luta {
+    - id: int
+    - rodada: int
+    - status: StatusLuta
+    - competidor1: Inscricao
+    - competidor2: Inscricao
+    - vencedor: Inscricao
+    + registrar_resultado(vencedor: Inscricao)
+}
+
+class TomadaDeTempo {
+    - id: int
+    - tempo_em_segundos: float
+    - data_registro: datetime
+}
+
+class Resultado {
+    - posicao: int
+    - inscricao: Inscricao
+    - melhor_tempo: float
+}
+
+' 6. Classe de Visualização
+class PainelDeVisualizacao {
+    + ver_chave_de_batalha(competicao: CompeticaoCombate)
+    + ver_classificacao_seguidor(competicao: CompeticaoSeguidorDeLinha)
+    + ver_resultados_evento(evento: Evento)
+}
+
+' Relacionamentos
+Organizador "1" --> "*" Evento
+LiderDeEquipe "1" --> "1" Equipe
+Equipe "1" --> "*" Membro
+Equipe "1" --> "*" Robo
+Evento "1" --> "*" Competicao
+Competicao "1" --> "*" Inscricao
+Inscricao "1" --> "1" Robo
+CompeticaoCombate "1" --> "1" ChaveDeBatalha
+ChaveDeBatalha "1" --> "*" Luta
+Luta "1" --> "2" Inscricao
+Inscricao "1" --> "*" TomadaDeTempo
+CompeticaoSeguidorDeLinha "1" --> "*" Resultado
+Resultado "1" --> "1" Inscricao
+Juiz --> Luta
+Juiz --> TomadaDeTempo
+PainelDeVisualizacao --> CompeticaoCombate
+PainelDeVisualizacao --> CompeticaoSeguidorDeLinha
+PainelDeVisualizacao --> Evento
+@enduml
